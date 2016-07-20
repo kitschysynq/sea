@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-Wall -pedantic -g
 LDFLAGS=-ljansson -lcurl
 
-OBJECTS=sea.o request.o
+OBJECTS=sea.o request.o account.o
 
 sea: $(OBJECTS)
 	    $(CC) $(CFLAGS) $(OBJECTS) -o sea $(LDFLAGS)
