@@ -28,8 +28,10 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if(!account_get(a))
+	if(!account_get(a)) {
+		account_free(a);
 		return EXIT_FAILURE;
+	}
 
 	printf("Email: %s (verified: %s)\nStatus: %s\nStatus Message: %s\nUUID: %s\nDroplet Limit: %d\nFloating IP Limit: %d\n",
 			a->email,
@@ -39,8 +41,20 @@ int main(int argc, char *argv[])
 			a->uuid,
 			a->droplet_limit,
 			a->floating_ip_limit);
-
 	account_free(a);
+
+	struct ssh_keys *keys = NULL;
+	keys = account_ssh_keys();
+
+	printf("SSH Keys (%d):\n", keys->count);
+	for(int i = 0; i < keys->count; i++) {
+		printf("\tID: %d\n\tName: %s\n\tFingerprint: %s\n\tPublic Key: %s\n",
+				keys->keys[i]->id,
+				keys->keys[i]->name,
+				keys->keys[i]->fingerprint,
+				keys->keys[i]->public_key);
+	}
+	ssh_keys_free(keys);
 
 	return EXIT_SUCCESS;
 }
