@@ -1,4 +1,4 @@
-CC=gcc
+CC=c99
 CFLAGS=-Wall -pedantic -g
 LDFLAGS=-ljansson -lcurl
 
