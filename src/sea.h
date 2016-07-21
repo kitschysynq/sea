@@ -1,8 +1,7 @@
-#pragma once
-#include <stdio.h>
+#ifndef _SEA_H
+#define _SEA_H
 
-// Basic API request functions
-#include "request.h"
+#define URL_BASE "https://api.digitalocean.com/v2"
+#define URL_SIZE 256
 
-// Include the definitions for each type and api endpoint
-#include "account.h"
+#endif /* _SEA_H */

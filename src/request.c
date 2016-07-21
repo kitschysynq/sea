@@ -8,8 +8,6 @@
 
 #define BUFFER_SIZE  (256 * 1024)  /* 256 KB */
 
-const char * base_url = "https://api.digitalocean.com/v2/";
-
 void get_auth_token(char * token, int size) {
 	snprintf(token, size, "Authorization: Bearer %s", getenv("DIGITALOCEAN_API_TOKEN"));
 }

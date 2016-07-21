@@ -8,4 +8,3 @@ struct write_result
 size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream);
 
 char *request(const char *url);
-
