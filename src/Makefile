@@ -2,7 +2,7 @@ CC=c99
 CFLAGS=-Wall -pedantic -g
 LDFLAGS=-ljansson -lcurl
 
-OBJECTS=sea.o request.o account.o
+OBJECTS=sea.o request.o account.o droplet.o
 
 sea: $(OBJECTS)
 	    $(CC) $(CFLAGS) $(OBJECTS) -o sea $(LDFLAGS)
