@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 		return 2;
 	}
 
-	if(strncmp(argv[2], "account", ARG_SIZE) == 0) {
+	if(strncmp(argv[1], "account", ARG_SIZE) == 0) {
 		struct account *a = account_new();
 		if(a == NULL)
 		{
@@ -66,6 +66,19 @@ int main(int argc, char *argv[])
 				);
 
 		droplet_free(d);
+	} else if(strncmp(argv[1], "ssh", ARG_SIZE) == 0) {
+		struct ssh_keys *keys = NULL;
+		keys = account_ssh_keys();
+
+		printf("SSH Keys (%d):\n", keys->count);
+		for(int i = 0; i < keys->count; i++) {
+			printf("\tID: %d\n\tName: %s\n\tFingerprint: %s\n\tPublic Key: %s\n",
+					keys->keys[i]->id,
+					keys->keys[i]->name,
+					keys->keys[i]->fingerprint,
+					keys->keys[i]->public_key);
+		}
+		ssh_keys_free(keys);
 	}
 
 	return EXIT_SUCCESS;

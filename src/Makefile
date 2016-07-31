@@ -1,18 +1,18 @@
-CC=c99
-CFLAGS=-Wall -pedantic -g
-LDFLAGS=-ljansson -lcurl
+CFLAGS = -std=c99 -Wall -pedantic -g
+LDFLAGS = -ljansson -lcurl
 
-OBJECTS=sea.o request.o account.o droplet.o
+OBJECTS = account.o \
+	  request.o \
+	  droplet.o \
+	  sea.o
 
 sea: $(OBJECTS)
-	    $(CC) $(CFLAGS) $(OBJECTS) -o sea $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LDFLAGS) -o $@
 
-all:sea
+all: sea
 
-.PHONY: clean
-	clean:
-	    rm -f *~ *.o client
+clean:
+	$(RM) *.o
+	$(RM) sea
 
-
-# all:
-# 	gcc -I . -o sea -ljansson drosh.c account.c
+.PHONY: all clean
