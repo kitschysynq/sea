@@ -1,0 +1,9 @@
+language: c
+compiler:
+ - gcc
+ - clang
+addons:
+  apt:
+    packages:
+     - libjansson-dev
+script: make
