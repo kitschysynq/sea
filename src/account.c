@@ -270,7 +270,7 @@ int account_get(struct account *a)
 	strncpy(a->status, json_string_value(status), len);
 	strncpy(a->status_message, json_string_value(status_message), len);
 	strncpy(a->uuid, json_string_value(uuid), len);
-	a->email_verified = (int)json_boolean_value(email_verified);
+	a->email_verified = (int)json_is_true(email_verified);
 	a->droplet_limit = (int)json_integer_value(droplet_limit);
 	a->floating_ip_limit = (int)json_integer_value(floating_ip_limit);
 
