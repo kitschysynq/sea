@@ -6,26 +6,39 @@
 
 #include "request.h"
 
-#define BUFFER_SIZE  (256 * 1024)  /* 256 KB */
+char *
+auth_header(char *token)
+{
+	const char *fmt = "Authorization: Bearer %s";
+	/* (fmt - '%s') + (token + \0) */
+	size_t len = (strlen(fmt) - 2) + strlen(token) + 1;
+	char *header = malloc(sizeof(char) * len);
+	if(!header) {
+		perror("malloc");
+		return NULL;
+	}
 
-void get_auth_token(char * token, int size) {
-	snprintf(token, size, "Authorization: Bearer %s", getenv("DIGITALOCEAN_API_TOKEN"));
+	snprintf(header, len, fmt, token);
+	return header;
 }
 
-size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t
+write_response(void *ptr, size_t size, size_t nmemb, void *stream)
 {
+	size_t realsize = size * nmemb;
 	struct write_result *result = (struct write_result *)stream;
 
-	if(result->pos + size * nmemb >= BUFFER_SIZE - 1)
-	{
-		fprintf(stderr, "error: too small buffer\n");
+	result->data = realloc(result->data, result->size + realsize + 1);
+	if(!result->data) {
+		perror("realloc");
 		return 0;
 	}
 
-	memcpy(result->data + result->pos, ptr, size * nmemb);
-	result->pos += size * nmemb;
+	memcpy(&(result->data[result->size]), ptr, realsize);
+	result->size += realsize;
+	result->data[result->size] = 0;
 
-	return size * nmemb;
+	return realsize;
 }
 
 char *request(const char *url)
@@ -33,51 +46,48 @@ char *request(const char *url)
 	CURL *curl = NULL;
 	CURLcode status;
 	struct curl_slist *headers = NULL;
-	char *data = NULL;
+	struct write_result result;
 	long code;
+	char *auth = NULL;
 
 	curl_global_init(CURL_GLOBAL_ALL);
 	curl = curl_easy_init();
 	if(!curl)
 		goto error;
 
-	data = malloc(BUFFER_SIZE);
-	if(!data)
+	result.size = 0;
+	result.data = malloc(1);
+	if(!result.data) {
+		perror("malloc");
 		goto error;
+	}
 
-	struct write_result write_result = {
-		.data = data,
-		.pos = 0
-	};
+	auth = auth_header(getenv("DIGITALOCEAN_API_TOKEN"));
+	if(!auth)
+		goto error;
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 
 	headers = curl_slist_append(headers, "User-Agent: sea/0.1");
 	headers = curl_slist_append(headers, "Content-Type: application/json");
+	headers = curl_slist_append(headers, auth);
 
-	size_t token_size = 255;
-	char *token = (char *)calloc(sizeof(char), token_size);
-	get_auth_token(token, token_size);
-	headers = curl_slist_append(headers, token);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-	// headers = curl_slist_append(headers, sprintf("Authorization: Bearer %s", token));
-	// curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_response);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &write_result);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
 
-	status = curl_easy_perform(curl);
-	if(status != 0)
-	{
+	if((status = curl_easy_perform(curl)) != CURLE_OK) {
 		fprintf(stderr, "error: unable to request data from %s:\n", url);
 		fprintf(stderr, "%s\n", curl_easy_strerror(status));
 		goto error;
 	}
 
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
-	if(code != 200)
-	{
+	if((status = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code)) != CURLE_OK) {
+		fprintf(stderr, "%s\n", curl_easy_strerror(status));
+		goto error;
+	}
+
+	if(code >= 400) {
 		fprintf(stderr, "error: server responded with code %ld\n", code);
 		goto error;
 	}
@@ -87,19 +97,19 @@ char *request(const char *url)
 	curl_global_cleanup();
 
 	/* zero-terminate the result */
-	data[write_result.pos] = '\0';
+	result.data[result.size] = '\0';
 
-	return data;
+	return result.data;
 
 error:
-	if(data)
-		free(data);
+	if(result.data)
+		free(result.data);
 	if(curl)
 		curl_easy_cleanup(curl);
 	if(headers)
 		curl_slist_free_all(headers);
-	if(token)
-		free(token);
+	if(auth)
+		free(auth);
 	curl_global_cleanup();
 	return NULL;
 }

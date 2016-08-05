@@ -1,10 +1,13 @@
-#pragma once
+#ifndef _SEA_REQUEST_H
+#define _SEA_REQUEST_H
+
 struct write_result
 {
 	char *data;
-	int pos;
+	size_t size;
 };
 
-size_t write_response(void *ptr, size_t size, size_t nmemb, void *stream);
-
+char *auth_header(char *token);
 char *request(const char *url);
+
+#endif /* _SEA_REQUEST_H */
