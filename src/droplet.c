@@ -138,7 +138,7 @@ int droplet_get_by_id(struct droplet *d, int id)
 	d->memory = (int)json_integer_value(memory);
 	d->vcpus = (int)json_integer_value(vcpus);
 	d->disk = (int)json_integer_value(disk);
-	d->locked = (int)json_boolean_value(locked);
+	d->locked = (int)json_is_true(locked);
 
 finish:
 	json_decref(root);
