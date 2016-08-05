@@ -3,6 +3,7 @@ LDFLAGS = -ljansson -lcurl
 
 OBJECTS = account.o \
 	  request.o \
+	  droplet.o \
 	  sea.o
 
 sea: $(OBJECTS)
