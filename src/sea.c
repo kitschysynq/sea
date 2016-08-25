@@ -71,13 +71,17 @@ int main(int argc, char *argv[])
 		keys = account_ssh_keys();
 
 		printf("SSH Keys (%d):\n", keys->count);
-		for(int i = 0; i < keys->count; i++) {
+		struct ssh_key *key;
+		while((key = keys->next(keys)) != NULL) {
 			printf("\tID: %d\n\tName: %s\n\tFingerprint: %s\n\tPublic Key: %s\n",
-					keys->keys[i]->id,
-					keys->keys[i]->name,
-					keys->keys[i]->fingerprint,
-					keys->keys[i]->public_key);
+					key->id,
+					key->name,
+					key->fingerprint,
+					key->public_key);
+
+			ssh_key_free(key);
 		}
+
 		ssh_keys_free(keys);
 	}
 

@@ -26,6 +26,68 @@ void account_free(struct account *a)
 	a = NULL;
 }
 
+struct ssh_key *
+_ssh_keys_next(struct ssh_keys *keys)
+{
+	json_t *container;
+	container = json_object_get(keys->data, "ssh_keys");
+	if(!json_is_array(container)) {
+		fprintf(stderr, "error: ssh_keys is not an array\n");
+		return NULL;
+	}
+
+	struct ssh_key *key = NULL;
+	json_t *elem, *id, *name, *fingerprint, *public_key;
+
+	elem = json_array_get(container, keys->pos);
+	if(!json_is_object(elem)) {
+		goto done;
+	}
+
+	id = json_object_get(elem, "id");
+	if(!json_is_integer(id)) {
+		fprintf(stderr, "error: ssh key name is not a string\n");
+		goto done;
+	}
+
+	name = json_object_get(elem, "name");
+	if(!json_is_string(name)) {
+		fprintf(stderr, "error: ssh key name is not a string\n");
+		goto done;
+	}
+
+	fingerprint = json_object_get(elem, "fingerprint");
+	if(!json_is_string(name)) {
+		fprintf(stderr, "error: ssh key fingerprint is not a string\n");
+		goto done;
+	}
+
+	public_key = json_object_get(elem, "public_key");
+	if(!json_is_string(name)) {
+		fprintf(stderr, "error: ssh public_key is not a string\n");
+		goto done;
+	}
+
+	key = malloc(sizeof(struct ssh_key));
+	const char *tmp_n  = json_string_value(name);
+	const char *tmp_fp = json_string_value(fingerprint);
+	const char *tmp_pk = json_string_value(public_key);
+
+	key->id = (int)json_integer_value(id);
+	key->name = malloc(sizeof(char) * strlen(tmp_n) + 1);
+	key->fingerprint = malloc(sizeof(char) * strlen(tmp_fp) + 1);
+	key->public_key = malloc(sizeof(char) * strlen(tmp_pk) + 1);
+
+	strncpy(key->name, tmp_n, strlen(tmp_n) + 1);
+	strncpy(key->fingerprint, tmp_fp, strlen(tmp_fp) + 1);
+	strncpy(key->public_key, tmp_pk, strlen(tmp_pk) + 1);
+
+	keys->pos++;
+
+done:
+	return key;
+}
+
 // account_ssh_keys retrieves a users ssh keys.
 //
 // On success, a list of ssh keys is returned.
@@ -48,94 +110,39 @@ account_ssh_keys()
 	if(!response)
 		return NULL;
 
-	json_t *root;
+	keys = malloc(sizeof(struct ssh_keys));
+	if(keys == NULL)
+		goto error;
+
 	json_error_t error;
-	root = json_loads(response, 0, &error);
+	keys->data = json_loads(response, 0, &error);
 	free(response);
 	response = NULL;
 
-	if(!root) {
-		fprintf(stderr, "error: on line %d: %s\n", error.line, error.text);
-		return NULL;
+	if(!keys->data) {
+		fprintf(stderr, "json error: on line %d: %s\n", error.line, error.text);
+		goto error;
 	}
 
-	if(!json_is_object(root)) {
-		fprintf(stderr, "error: root is not an object\n");
+	if(!json_is_object(keys->data)) {
+		fprintf(stderr, "json error: root is not an object\n");
 		goto error;
 	}
 
 	json_t *container;
-	container = json_object_get(root, "ssh_keys");
+	container = json_object_get(keys->data, "ssh_keys");
 	if(!json_is_array(container)) {
-		fprintf(stderr, "error: ssh_keys is not an array\n");
+		fprintf(stderr, "json error: 'ssh_keys' is not an array\n");
 		goto error;
 	}
 
-	keys = malloc(sizeof(struct ssh_keys));
-	if(keys == NULL)
-		goto error;
+	keys->pos = 0;
 	keys->count = json_array_size(container);
-	keys->keys = malloc(sizeof(struct ssh_key) * keys->count);
-	if(keys->keys == NULL)
-		goto error;
+	keys->next = _ssh_keys_next;
 
-	for(int i = 0; i < keys->count; i++) {
-		keys->keys[i] = malloc(sizeof(struct ssh_key));
-		if(keys->keys[i] == NULL)
-			goto error;
-
-		json_t *elem, *id, *name, *fingerprint, *public_key;
-
-		elem = json_array_get(container, i);
-		if(!json_is_object(elem)) {
-			fprintf(stderr, "error: ssh key data %d is not an object\n", i + 1);
-			goto error;
-		}
-
-		id = json_object_get(elem, "id");
-		if(!json_is_integer(id)) {
-			fprintf(stderr, "error: ssh key name is not a string\n");
-			goto error;
-		}
-
-		name = json_object_get(elem, "name");
-		if(!json_is_string(name)) {
-			fprintf(stderr, "error: ssh key name is not a string\n");
-			goto error;
-		}
-
-		fingerprint = json_object_get(elem, "fingerprint");
-		if(!json_is_string(name)) {
-			fprintf(stderr, "error: ssh key fingerprint is not a string\n");
-			goto error;
-		}
-
-		public_key = json_object_get(elem, "public_key");
-		if(!json_is_string(name)) {
-			fprintf(stderr, "error: ssh public_key is not a string\n");
-			goto error;
-		}
-
-		const char *tmp_n  = json_string_value(name);
-		const char *tmp_fp = json_string_value(fingerprint);
-		const char *tmp_pk = json_string_value(public_key);
-
-		keys->keys[i]->id = (int)json_integer_value(id);
-		keys->keys[i]->name = malloc(sizeof(char) * strlen(tmp_n) + 1);
-		keys->keys[i]->fingerprint = malloc(sizeof(char) * strlen(tmp_fp) + 1);
-		keys->keys[i]->public_key = malloc(sizeof(char) * strlen(tmp_pk) + 1);
-
-		strncpy(keys->keys[i]->name, tmp_n, strlen(tmp_n) + 1);
-		strncpy(keys->keys[i]->fingerprint, tmp_fp, strlen(tmp_fp) + 1);
-		strncpy(keys->keys[i]->public_key, tmp_pk, strlen(tmp_pk) + 1);
-	}
-
-	json_decref(root);
 	return keys;
 error:
 	ssh_keys_free(keys);
-	json_decref(root);
-
 	return NULL;
 }
 
@@ -149,11 +156,8 @@ void ssh_key_free(struct ssh_key *key)
 
 void ssh_keys_free(struct ssh_keys *keys)
 {
-	for(int i = 0; i< keys->count; i++)
-		if(keys->keys[i])
-			ssh_key_free(keys->keys[i]);
-	if(keys->keys)
-		free(keys->keys);
+	if(keys->data)
+		json_decref(keys->data);
 	if(keys)
 		free(keys);
 }
