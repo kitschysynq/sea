@@ -1,6 +1,8 @@
 #ifndef _SEA_ACCOUNT_H
 #define _SEA_ACCOUNT_H
 
+#include <jansson.h>
+
 struct account
 {
 	int droplet_limit;
@@ -14,8 +16,10 @@ struct account
 
 struct ssh_keys
 {
+	int pos;
 	int count;
-	struct ssh_key **keys;
+	json_t *data;
+	struct ssh_key *(*next)(struct ssh_keys *keys);
 };
 
 struct ssh_key
